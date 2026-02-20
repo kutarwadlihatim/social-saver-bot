@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Form
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response
+import re
 
 router = APIRouter()
 
@@ -11,7 +12,16 @@ async def receive_message(
     print("Message:", Body)
     print("From:", From)
 
-    reply = f"Got your message: {Body}"
+    instagram_pattern = r"(https?://(?:www\.)?instagram\.com/[^\s]+)"
+
+    match = re.search(instagram_pattern, Body)
+
+    if match:
+        link = match.group(0)
+        print("Instagram Link detected", link)
+        reply = "Instagram link detected! Saving it..."
+    else:
+        reply = "Please send a valid Instagram Link."
 
     twiml = f"""
     <Response>

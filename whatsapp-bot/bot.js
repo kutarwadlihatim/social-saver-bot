@@ -1,127 +1,76 @@
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 const axios = require("axios");
-const express = require("express");
 
-console.log("Starting WhatsApp Bot...");
+console.log("🚀 Starting WhatsApp Bot...");
+
+const BACKEND_URL = "https://social-saver-bot-4217.onrender.com";
 
 const client = new Client({
-  authStrategy: new LocalAuth(),
+  authStrategy: new LocalAuth({
+    dataPath: "./session"
+  }),
   puppeteer: {
-    headless: false,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  },
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-accelerated-2d-canvas",
+      "--disable-gpu"
+    ]
+  }
 });
 
-const app = express();
-app.use(express.json());
-
-
-// ==============================
-// QR + Ready
-// ==============================
-
 client.on("qr", (qr) => {
-  console.log("QR RECEIVED");
+  console.log("📲 Scan this QR:");
   qrcode.generate(qr, { small: true });
 });
 
 client.on("ready", () => {
-  console.log("WhatsApp Bot Ready");
+  console.log("✅ WhatsApp Bot Ready");
 });
-
-client.on("disconnected", (reason) => {
-  console.log("Client was logged out:", reason);
-});
-
-
-// ==============================
-// OTP Endpoint (Backend calls this)
-// ==============================
-
-app.post("/send-otp", async (req, res) => {
-  const { phone, otp } = req.body;
-
-  if (!phone || !otp) {
-    return res.status(400).json({ error: "Missing phone or otp" });
-  }
-
-  try {
-    if (!client.info) {
-      console.log("Client not ready yet");
-      return res.status(500).json({ error: "WhatsApp not ready" });
-    }
-
-    const formattedNumber = `${phone}@c.us`;
-
-    // Small delay to avoid detached frame issue
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    await client.sendMessage(
-      formattedNumber,
-      `🔐 Your Social Saver login OTP is: *${otp}*\n\nDo not share this with anyone.`
-    );
-
-    console.log("OTP sent to:", phone);
-
-    res.json({ success: true });
-
-  } catch (err) {
-    console.error("OTP send error:", err);
-
-    res.status(500).json({
-      error: "Failed to send OTP",
-      details: err.message
-    });
-  }
-});
-
-
-// ==============================
-// Instagram Link Listener
-// ==============================
 
 client.on("message", async (message) => {
+
   try {
     if (message.fromMe) return;
     if (message.from.endsWith("@g.us")) return;
     if (message.from === "status@broadcast") return;
-    if (message.from.includes("newsletter")) return;
     if (!message.body) return;
-
-    const instagramRegex =
-      /^https?:\/\/(www\.)?instagram\.com\/(reel|p)\/.+/;
-
-    if (!instagramRegex.test(message.body)) return;
-
-    console.log("Valid Instagram link:", message.body);
 
     const contact = await message.getContact();
     const phoneNumber = contact.number;
 
-    const response = await axios.post(
-      "http://127.0.0.1:8000/webhook",
-      {
-        message: message.body,
-        from_user: phoneNumber,
-      }
-    );
+    // OTP reply handler
+    const otpRegex = /^\d{6}$/;
+    if (otpRegex.test(message.body.trim())) {
+      await axios.post(`${BACKEND_URL}/verify-otp`, {
+        phone: phoneNumber,
+        otp: message.body.trim()
+      });
+
+      await message.reply("✅ OTP verified. You can now login.");
+      return;
+    }
+
+    // Instagram link handler
+    const instagramRegex = /^https?:\/\/(www\.)?instagram\.com\/(reel|p)\/.+/;
+
+    if (!instagramRegex.test(message.body)) return;
+
+    console.log("📌 Valid Instagram link:", message.body);
+
+    const response = await axios.post(`${BACKEND_URL}/webhook`, {
+      message: message.body,
+      from_user: phoneNumber
+    });
 
     await message.reply(response.data.ai_result);
 
-  } catch (error) {
-    console.error("Backend error:", error.message);
-    await message.reply("Something went wrong.");
+  } catch (err) {
+    console.error("❌ Error:", err.message);
   }
-});
-
-
-// ==============================
-// Start OTP Server
-// ==============================
-
-app.listen(3001, () => {
-  console.log("Bot OTP server running on port 3001");
 });
 
 client.initialize();

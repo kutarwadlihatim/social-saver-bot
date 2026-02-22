@@ -22,8 +22,8 @@ const client = new Client({
 });
 
 client.on("qr", (qr) => {
-  console.log("📲 Scan this QR:");
-  qrcode.generate(qr, { small: true });
+  console.log("Scan this QR in browser:");
+  console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qr}`);
 });
 
 client.on("ready", () => {

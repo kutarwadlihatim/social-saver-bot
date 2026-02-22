@@ -61,23 +61,10 @@ async def send_otp(data: PhoneSchema):
 
 
 # ==============================
-# Verify OTP
+# Helpers
 # ==============================
 
-@router.post("/verify-otp")
-async def verify_otp(data: VerifySchema):
-
-    phone = "".join(filter(str.isdigit, data.phone))
-
-    if phone not in otp_store:
-        raise HTTPException(status_code=400, detail="OTP not requested")
-
-    if otp_store[phone] != data.otp:
-        raise HTTPException(status_code=401, detail="Invalid OTP")
-
-    # Remove OTP after successful verification
-    del otp_store[phone]
-
+def get_user_data(phone: str):
     # Fetch user links
     user_links = list(
         links_collection.find({"user": phone})
@@ -97,6 +84,41 @@ async def verify_otp(data: VerifySchema):
         "total_links": len(user_links),
         "categories": grouped
     }
+
+
+# ==============================
+# Verify OTP
+# ==============================
+
+@router.post("/verify-otp")
+async def verify_otp(data: VerifySchema):
+
+    phone = "".join(filter(str.isdigit, data.phone))
+
+    if phone not in otp_store:
+        raise HTTPException(status_code=400, detail="OTP not requested")
+
+    if otp_store[phone] != data.otp:
+        raise HTTPException(status_code=401, detail="Invalid OTP")
+
+    # Remove OTP after successful verification
+    del otp_store[phone]
+
+    return get_user_data(phone)
+
+# ==============================
+# Session Login
+# ==============================
+
+@router.post("/login")
+async def login(data: PhoneSchema):
+
+    phone = "".join(filter(str.isdigit, data.phone))
+
+    if not phone:
+        raise HTTPException(status_code=400, detail="Invalid phone number")
+
+    return get_user_data(phone)
 
 @router.delete("/delete-link/{link_id}")
 async def delete_link(link_id: str):

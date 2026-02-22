@@ -11,11 +11,13 @@ from app.routes.webhook import router as webhook_router
 from dotenv import load_dotenv
 import os
 
+from app.routes.auth import router as auth_router
+
+
+
 load_dotenv()
 
 app = FastAPI()
-
-app.include_router(webhook_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,6 +26,9 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+app.include_router(webhook_router)
+app.include_router(auth_router)
 
 @app.get('/')
 def home():

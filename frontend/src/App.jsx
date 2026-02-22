@@ -1,40 +1,17 @@
 import { useState } from "react";
+import Login from "./Login";
+import Dashboard from "./Dashboard";
 
-export default function Login({ setUserData }) {
-
-  const [phone, setPhone] = useState("");
-
-  const handleLogin = async () => {
-    try {
-      const res = await axios.post("http://localhost:8000/login", {
-        phone
-      });
-
-      setUserData(res.data);
-
-    } catch (err) {
-      alert("Login failed");
-    }
-  };
+export default function App() {
+  const [userData, setUserData] = useState(null);
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-black text-white">
-      <h1 className="text-3xl mb-4">Login</h1>
-
-      <input
-        type="text"
-        placeholder="+44191572848656"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        className="p-2 text-black rounded"
-      />
-
-      <button
-        onClick={handleLogin}
-        className="mt-4 bg-blue-500 px-4 py-2 rounded"
-      >
-        Login
-      </button>
-    </div>
+    <>
+      {!userData ? (
+        <Login setUserData={setUserData} />
+      ) : (
+        <Dashboard userData={userData} />
+      )}
+    </>
   );
 }

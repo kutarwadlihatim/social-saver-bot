@@ -2,42 +2,70 @@ import { useState } from "react";
 
 export default function Login({ setUserData }) {
   const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    console.log("Login clicked");
-    console.log("Phone entered:", phone);
-
+  const sendOtp = async () => {
     if (!phone.trim()) {
-      alert("Please enter your phone number");
+      alert("Enter your phone number");
       return;
     }
 
     try {
       setLoading(true);
 
-      const response = await fetch("http://127.0.0.1:8000/login", {
+      const response = await fetch("http://127.0.0.1:8000/send-otp", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ phone: phone.trim() }),
+        body: JSON.stringify({ phone })
       });
 
-      console.log("Response status:", response.status);
-
       const data = await response.json();
-      console.log("Response data:", data);
 
       if (!response.ok) {
-        alert(data.detail || "Login failed");
+        alert(data.detail || "Failed to send OTP");
+        return;
+      }
+
+      setStep(2);
+
+    } catch (err) {
+      alert("Backend not reachable");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (!otp.trim()) {
+      alert("Enter OTP");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch("http://127.0.0.1:8000/verify-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ phone, otp })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || "Invalid OTP");
         return;
       }
 
       setUserData(data);
 
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch (err) {
       alert("Backend not reachable");
     } finally {
       setLoading(false);
@@ -45,24 +73,58 @@ export default function Login({ setUserData }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-black text-white">
-      <h1 className="text-3xl mb-6 font-bold">Login</h1>
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
 
-      <input
-        type="text"
-        placeholder="Enter your WhatsApp number"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        className="p-3 text-black rounded w-64"
-      />
+      <div className="bg-white shadow-lg rounded-xl p-8 w-96">
 
-      <button
-        onClick={handleLogin}
-        disabled={loading}
-        className="mt-5 bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded disabled:opacity-50"
-      >
-        {loading ? "Logging in..." : "Login"}
-      </button>
+        <h1 className="text-2xl font-bold mb-6 text-center">
+          Social Saver Login
+        </h1>
+
+        {step === 1 && (
+          <>
+            <input
+              type="text"
+              placeholder="Enter WhatsApp number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full p-3 border rounded-lg mb-4"
+            />
+
+            <button
+              onClick={sendOtp}
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-2 rounded-lg"
+            >
+              {loading ? "Sending..." : "Send OTP"}
+            </button>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <p className="text-sm text-gray-500 mb-4">
+              OTP sent to {phone}
+            </p>
+
+            <input
+              type="text"
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="w-full p-3 border rounded-lg mb-4"
+            />
+
+            <button
+              onClick={verifyOtp}
+              disabled={loading}
+              className="w-full bg-green-600 text-white py-2 rounded-lg"
+            >
+              {loading ? "Verifying..." : "Verify OTP"}
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

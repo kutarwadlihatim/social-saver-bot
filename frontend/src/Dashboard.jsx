@@ -1,137 +1,255 @@
 import { useState } from "react";
 
-export default function Dashboard({ userData }) {
+const categoryColors = [
+  "bg-blue-500",
+  "bg-green-500",
+  "bg-purple-500",
+  "bg-pink-500",
+  "bg-yellow-500",
+  "bg-red-500",
+  "bg-indigo-500",
+  "bg-teal-500"
+];
+
+export default function Dashboard({ userData, setUserData }) {
+
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [activeFilter, setActiveFilter] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   const categories = userData.categories || {};
   const totalLinks = userData.total_links || 0;
+
+  const logout = () => {
+    setUserData(null);
+  };
+
+  const deleteLink = async (id) => {
+    await fetch(`http://127.0.0.1:8000/delete-link/${id}`, {
+      method: "DELETE"
+    });
+    window.location.reload();
+  };
+
+  const isRecent = (date) => {
+    const now = new Date();
+    const created = new Date(date);
+    const diff = (now - created) / (1000 * 60 * 60);
+    return diff <= 24;
+  };
+
+  const allLinks = Object.values(categories).flat();
 
   return (
     <div className="flex min-h-screen bg-gray-100">
 
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-md p-6">
-        <h1 className="text-xl font-bold mb-8">Curator</h1>
+      <div className="w-64 bg-white shadow-md p-6 flex flex-col justify-between">
 
-        <ul className="space-y-4 text-gray-600">
-          <li className="font-semibold text-blue-600">Dashboard</li>
-          <li>My Categories</li>
-          <li>Recent Saves</li>
-          <li>Settings</li>
-        </ul>
+        <div>
+          <h1 className="text-xl font-bold mb-8">Social Saver</h1>
 
-        <div className="mt-12 text-sm text-green-600">
-          WhatsApp Bot Connected
+          <ul className="space-y-4">
+            <li
+              className={`cursor-pointer ${activeTab === "dashboard" ? "text-blue-600 font-semibold" : ""}`}
+              onClick={() => {
+                setActiveTab("dashboard");
+                setActiveFilter("All");
+              }}
+            >
+              Dashboard
+            </li>
+
+            <li
+              className={`cursor-pointer ${activeTab === "categories" ? "text-blue-600 font-semibold" : ""}`}
+              onClick={() => {
+                setActiveTab("categories");
+                setSelectedCategory(null);
+              }}
+            >
+              My Categories
+            </li>
+
+            <li
+              className={`cursor-pointer ${activeTab === "recent" ? "text-blue-600 font-semibold" : ""}`}
+              onClick={() => setActiveTab("recent")}
+            >
+              Recent Saves
+            </li>
+          </ul>
         </div>
+
+        <button
+          onClick={logout}
+          className="bg-red-500 text-white py-2 rounded-lg"
+        >
+          Logout
+        </button>
+
       </div>
 
       {/* Main Content */}
       <div className="flex-1 p-8">
 
-        {/* Top Bar */}
-        <div className="flex justify-between items-center mb-8">
-          <input
-            type="text"
-            placeholder="Find a saved reel..."
-            className="w-1/2 px-4 py-2 rounded-lg border border-gray-300"
-          />
+        {/* ================= DASHBOARD ================= */}
+        {activeTab === "dashboard" && (
+          <>
+            <h2 className="text-2xl font-bold mb-6">All Saved Reels</h2>
 
-          <button className="bg-blue-600 text-white px-5 py-2 rounded-lg">
-            + Save Link
-          </button>
-        </div>
+            {/* Filter Menu */}
+            <div className="flex gap-3 mb-8 flex-wrap">
+              <button
+                onClick={() => setActiveFilter("All")}
+                className={`px-4 py-2 rounded-full ${
+                  activeFilter === "All"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white border"
+                }`}
+              >
+                All
+              </button>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-6 mb-10">
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500 text-sm">Total Saves</p>
-            <h2 className="text-2xl font-bold mt-2">{totalLinks}</h2>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500 text-sm">Categories</p>
-            <h2 className="text-2xl font-bold mt-2">
-              {Object.keys(categories).length}
-            </h2>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500 text-sm">User</p>
-            <h2 className="text-lg font-semibold mt-2">
-              {userData.phone}
-            </h2>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-4 mb-8">
-          <button
-            onClick={() => setActiveFilter("All")}
-            className={`px-4 py-2 rounded-full ${
-              activeFilter === "All"
-                ? "bg-blue-600 text-white"
-                : "bg-white border"
-            }`}
-          >
-            All
-          </button>
-
-          {Object.keys(categories).map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveFilter(cat)}
-              className={`px-4 py-2 rounded-full ${
-                activeFilter === cat
-                  ? "bg-blue-600 text-white"
-                  : "bg-white border"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Content Sections */}
-        {Object.entries(categories).map(([category, links]) => {
-          if (activeFilter !== "All" && activeFilter !== category) {
-            return null;
-          }
-
-          return (
-            <div key={category} className="mb-12">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">
-                  {category} ({links.length})
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-3 gap-6">
-                {links.map((item, index) => (
-                  <div
-                    key={index}
-                    className="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition"
-                  >
-                    <p className="text-xs text-gray-400 mb-2">
-                      Instagram
-                    </p>
-
-                    <p className="text-sm font-medium mb-3 line-clamp-3">
-                      {item.ai_result}
-                    </p>
-
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      className="text-blue-600 text-sm font-semibold"
-                    >
-                      View Reel →
-                    </a>
-                  </div>
-                ))}
-              </div>
+              {Object.keys(categories).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveFilter(cat)}
+                  className={`px-4 py-2 rounded-full ${
+                    activeFilter === cat
+                      ? "bg-blue-600 text-white"
+                      : "bg-white border"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
-          );
-        })}
+
+            {/* Reel Grid */}
+            <div className="grid grid-cols-3 gap-6">
+              {(activeFilter === "All"
+                ? allLinks
+                : categories[activeFilter]
+              )?.map((item) => (
+                <div key={item._id} className="bg-white p-5 rounded-xl shadow-sm hover:shadow-md transition">
+                  <p className="text-sm mb-3 line-clamp-3">
+                    {item.ai_result}
+                  </p>
+
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    className="text-blue-600 text-sm"
+                  >
+                    View Reel
+                  </a>
+
+                  <button
+                    onClick={() => deleteLink(item._id)}
+                    className="block mt-3 text-red-500 text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ================= CATEGORIES ================= */}
+        {activeTab === "categories" && !selectedCategory && (
+          <>
+            <h2 className="text-2xl font-bold mb-6">My Categories</h2>
+
+            <div className="grid grid-cols-3 gap-6">
+              {Object.entries(categories).map(([cat, links], index) => (
+                <div
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`p-6 rounded-xl shadow-sm text-white cursor-pointer ${
+                    categoryColors[index % categoryColors.length]
+                  }`}
+                >
+                  <h3 className="text-lg font-semibold">{cat}</h3>
+                  <p className="text-sm mt-2">{links.length} Reels</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Category Detail View */}
+        {activeTab === "categories" && selectedCategory && (
+          <>
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="mb-4 text-blue-600"
+            >
+              ← Back
+            </button>
+
+            <h2 className="text-xl font-semibold mb-6">
+              {selectedCategory}
+            </h2>
+
+            <div className="grid grid-cols-3 gap-6">
+              {categories[selectedCategory].map((item) => (
+                <div key={item._id} className="bg-white p-5 rounded-xl shadow-sm">
+                  <p className="text-sm mb-3 line-clamp-3">
+                    {item.ai_result}
+                  </p>
+
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    className="text-blue-600 text-sm"
+                  >
+                    View Reel
+                  </a>
+
+                  <button
+                    onClick={() => deleteLink(item._id)}
+                    className="block mt-3 text-red-500 text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ================= RECENT ================= */}
+        {activeTab === "recent" && (
+          <>
+            <h2 className="text-2xl font-bold mb-6">Last 24 Hours</h2>
+
+            <div className="grid grid-cols-3 gap-6">
+              {allLinks.filter(link => isRecent(link.created_at)).map((item) => (
+                <div key={item._id} className="bg-white p-5 rounded-xl shadow-sm">
+                  <p className="text-sm mb-3 line-clamp-3">
+                    {item.ai_result}
+                  </p>
+
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    className="text-blue-600 text-sm"
+                  >
+                    View Reel
+                  </a>
+
+                  <button
+                    onClick={() => deleteLink(item._id)}
+                    className="block mt-3 text-red-500 text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
       </div>
     </div>
   );

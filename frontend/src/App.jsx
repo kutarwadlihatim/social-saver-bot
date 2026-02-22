@@ -10,7 +10,7 @@ export default function App() {
       {!userData ? (
         <Login setUserData={setUserData} />
       ) : (
-        <Dashboard userData={userData} />
+        <Dashboard userData={userData} setUserData={setUserData} />
       )}
     </>
   );
